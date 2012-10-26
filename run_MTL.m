@@ -1,22 +1,33 @@
 
-function rtn = run_MTL()
+function rtn = run_MTL(inname)
 
 % add path of libsvm
 addpath '~/softwares/libsvm-3.12/matlab/'
+addpath '../shared_scripts/'
 
+if nargin ==0
+    names={'emotions','yeast','scene','enron','cal500','fp','cancer','medical','toy10','toy50'}
+else
+    names={inname}
+end
 
-% actual running
-%for name={'emotions','yeast','scene','enron','cal500','fp','cancer','medical','toy10','toy50'}
-%X=dlmread(sprintf('/fs/group/urenzyme/workspace/data/%s_features',name{1}));
-%Y=dlmread(sprintf('/fs/group/urenzyme/workspace/data/%s_targets',name{1}));
-
-% simulate testing
-for name={'toy10'}
-X=dlmread(sprintf('./test_data/%s_features',name{1}));
-Y=dlmread(sprintf('./test_data/%s_targets',name{1}));
+for name=names
+[sta,comres]=system('hostname');
+if strcmp(comres,'dave')
+    X=dlmread(sprintf('/fs/group/urenzyme/workspace/data/%s_features',name{1}));
+    Y=dlmread(sprintf('/fs/group/urenzyme/workspace/data/%s_targets',name{1}));
+else
+    X=dlmread(sprintf('../shared_scripts/test_data/%s_features',name{1}));
+    Y=dlmread(sprintf('../shared_scripts/test_data/%s_targets',name{1}));
+end
 
 rand('twister', 0);
 
+%------------
+%
+% preparing     
+%
+%------------
 % example selection with meaningful features
 Xsum=sum(X,2);
 X=X(find(Xsum~=0),:);
@@ -78,7 +89,7 @@ for i=1:Ny
         if strcmp(name{1}(1:2),'to')
                 svm_c=0.01;
         elseif strcmp(name{1},'cancer')
-                svm_c=5
+                svm_c=5;
         else
                 svm_c=0.5;
         end
@@ -98,10 +109,8 @@ for i=1:Ny
     YpredVal = [YpredVal,YcolVal(:,1)];
 end
 % performance of svm
-[ax,ay,t,auc]=perfcurve(reshape(Y,1,numel(Y)),reshape(YpredVal,1,numel(Y)),1);
-auc1=get_auc(Y,YpredVal);
-[acc,vecacc,pre,rec,f1]=get_performance(Y,Ypred);
-perf=[perf;[acc,vecacc,pre,rec,f1,auc,auc1]];perf
+[acc,vecacc,pre,rec,f1,auc1,auc2]=get_performance(Y,Ypred,YpredVal);
+perf=[perf;[acc,vecacc,pre,rec,f1,auc1,auc2]];perf
 
 
 %------------
@@ -113,15 +122,15 @@ perf=[perf;[acc,vecacc,pre,rec,f1,auc,auc1]];perf
 if ~or(strcmp(name{1},'fp'),strcmp(name{1},'cancer'))
     K=X'; 
 end
-gammas=[0.001,0.01]%,0.1,1,5,10];
+gammas=[10,5,1,0.5,0.1,0.01];
 iterations=10;
 method_str='feat';
-fname='tmpmtl';
+fname=sprintf('mtltmp_%s',name{1});
 epsilon_init=1;
 cv_size=1;
 Dini=diag(repmat(1/size(K,1),size(K,1),1));
 Dini(size(Dini,1),size(Dini,1))=Dini(size(Dini,1),size(Dini,1))+1-sum(sum(Dini));
-Isel = randsample(1:size(K,2),ceil(size(K,2)*.05));
+Isel = randsample(1:size(K,2),ceil(size(K,2)*.03));
 IselTrain=Isel(1:ceil(numel(Isel)/3*2));
 IselTest=Isel(1:ceil(numel(Isel)/3));
 selRes=gammas*0;
@@ -135,15 +144,15 @@ for i=1:numel(gammas)
     Y_ts = Y(IselTest,:); Y_ts=reshape(Y_ts,numel(Y_ts),1);
     % running
     rtn = code_example(gamma,trainx,Y_tr,testx,Y_ts,task_indexes,task_indexes_test,cv_size,Dini,iterations,method_str, epsilon_init, fname);
-    selRes(i)=sum(sum(Y_ts==(rtn>=0.5)));
+    selRes(i)=sum(sum(Y_ts==(rtn>0.5)));
 end
 gamma=gammas(find(selRes==max(selRes)));
 if numel(gamma) >1
     gamma=gamma(1);
 end
 
-selRes
-gamma
+pa=[selRes;gammas]
+dlmwrite(sprintf('../parameters/%s_para',name{1}),pa)
 
 % running
 iterations=10;
@@ -168,12 +177,10 @@ YpredVal = sortrows(YpredVal,size(YpredVal,2));
 YpredVal = YpredVal(:,1:size(Y,2));
 
 % auc & roc mtl
-[ax,ay,t,auc]=perfcurve(reshape(Y,1,numel(Y)),reshape(YpredVal,1,numel(Y)),1);
-auc1=get_auc(Y,YpredVal);
-[acc,vecacc,pre,rec,f1]=get_performance(Y,(YpredVal>=0.5));
-perf=[perf;[acc,vecacc,pre,rec,f1,auc,auc1]];perf
+[acc,vecacc,pre,rec,f1,auc1,auc2]=get_performance(Y,(YpredVal>0.5),YpredVal);
+perf=[perf;[acc,vecacc,pre,rec,f1,auc1,auc2]];perf
 dlmwrite(sprintf('../predictions/%s_predValMTL',name{1}),YpredVal)
-dlmwrite(sprintf('../predictions/%s_predBinMTL',name{1}),YpredVal>=0.5)
+dlmwrite(sprintf('../predictions/%s_predBinMTL',name{1}),YpredVal>0.5)
 
 % save results
 dlmwrite(sprintf('../results/%s_perfMTL',name{1}),perf)
@@ -184,13 +191,5 @@ end
 
 
 
-
-function [auc] = get_auc(Y,YpredVal)
-    AUC=zeros(1,size(Y,2));
-    for i=1:size(Y,2)
-        [ax,ay,t,AUC(1,i)]=perfcurve(Y(:,i),YpredVal(:,i),1);
-    end
-    auc=mean(AUC);
-end
 
 
