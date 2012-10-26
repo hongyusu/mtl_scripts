@@ -6,3 +6,4 @@ do
     nohup matlab -nodesktop -nosplash -r "run_MTL '$inname'" &
 done
 wait
+rm nohup.out

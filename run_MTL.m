@@ -13,7 +13,7 @@ end
 
 for name=names
 [sta,comres]=system('hostname');
-if strcmp(comres,'dave')
+if strcmp(comres(1:4),'dave')
     X=dlmread(sprintf('/fs/group/urenzyme/workspace/data/%s_features',name{1}));
     Y=dlmread(sprintf('/fs/group/urenzyme/workspace/data/%s_targets',name{1}));
 else
