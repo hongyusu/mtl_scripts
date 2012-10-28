@@ -132,7 +132,7 @@ Dini=diag(repmat(1/size(K,1),size(K,1),1));
 Dini(size(Dini,1),size(Dini,1))=Dini(size(Dini,1),size(Dini,1))+1-sum(sum(Dini));
 Isel = randsample(1:size(K,2),ceil(size(K,2)*.03));
 IselTrain=Isel(1:ceil(numel(Isel)/3*2));
-IselTest=Isel(1:ceil(numel(Isel)/3));
+IselTest=Isel(ceil(numel(Isel)/3+1):numel(Isel));
 selRes=gammas*0;
 for i=1:numel(gammas)
     gamma=gammas(i);
@@ -152,7 +152,8 @@ if numel(gamma) >1
 end
 
 pa=[selRes;gammas]
-dlmwrite(sprintf('../parameters/%s_para',name{1}),pa)
+dlmwrite(sprintf('../parameters/%s_paraMTL',name{1}),pa)
+daf
 
 % running
 iterations=10;
