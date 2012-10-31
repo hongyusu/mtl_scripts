@@ -122,8 +122,11 @@ perf=[perf;[acc,vecacc,pre,rec,f1,auc1,auc2]];perf
 if ~or(strcmp(name{1},'fp'),strcmp(name{1},'cancer'))
     K=X'; 
 end
-gammas=[10,5,1,0.5,0.1,0.01];
+gammas=[100,10,5,1,0.5,0.1,0.01,0.001];
 iterations=10;
+if strcmp(name{1},'cancer')
+    iterations=5
+end
 method_str='feat';
 fname=sprintf('mtltmp_%s',name{1});
 epsilon_init=1;
@@ -132,7 +135,7 @@ Dini=diag(repmat(1/size(K,1),size(K,1),1));
 Dini(size(Dini,1),size(Dini,1))=Dini(size(Dini,1),size(Dini,1))+1-sum(sum(Dini));
 Isel = randsample(1:size(K,2),ceil(size(K,2)*.03));
 IselTrain=Isel(1:ceil(numel(Isel)/3*2));
-IselTest=Isel(ceil(numel(Isel)/3+1):numel(Isel));
+IselTest=Isel(ceil(numel(Isel)/3*2+1):numel(Isel));
 selRes=gammas*0;
 for i=1:numel(gammas)
     gamma=gammas(i);
@@ -144,7 +147,8 @@ for i=1:numel(gammas)
     Y_ts = Y(IselTest,:); Y_ts=reshape(Y_ts,numel(Y_ts),1);
     % running
     rtn = code_example(gamma,trainx,Y_tr,testx,Y_ts,task_indexes,task_indexes_test,cv_size,Dini,iterations,method_str, epsilon_init, fname);
-    selRes(i)=sum(sum(Y_ts==(rtn>0.5)));
+    rtn
+    selRes(i)=sum(sum(Y_ts==(rtn>=0.5)));
 end
 gamma=gammas(find(selRes==max(selRes)));
 if numel(gamma) >1
@@ -153,7 +157,6 @@ end
 
 pa=[selRes;gammas]
 dlmwrite(sprintf('../parameters/%s_paraMTL',name{1}),pa)
-daf
 
 % running
 iterations=10;
@@ -178,10 +181,10 @@ YpredVal = sortrows(YpredVal,size(YpredVal,2));
 YpredVal = YpredVal(:,1:size(Y,2));
 
 % auc & roc mtl
-[acc,vecacc,pre,rec,f1,auc1,auc2]=get_performance(Y,(YpredVal>0.5),YpredVal);
+[acc,vecacc,pre,rec,f1,auc1,auc2]=get_performance(Y,(YpredVal>=0.5),YpredVal);
 perf=[perf;[acc,vecacc,pre,rec,f1,auc1,auc2]];perf
 dlmwrite(sprintf('../predictions/%s_predValMTL',name{1}),YpredVal)
-dlmwrite(sprintf('../predictions/%s_predBinMTL',name{1}),YpredVal>0.5)
+dlmwrite(sprintf('../predictions/%s_predBinMTL',name{1}),YpredVal>=0.5)
 
 % save results
 dlmwrite(sprintf('../results/%s_perfMTL',name{1}),perf)

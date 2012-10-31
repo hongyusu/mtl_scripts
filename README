@@ -3,4 +3,8 @@
 run from run_MTL.m
 
 
-give input
+1. give input
+2. parameter selection [10,5,1,.5,.1,.01,.001]
+3. validation on 3% of data
+4. iteration parameter is set to 10, cancer is for 5
+
