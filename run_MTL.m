@@ -147,7 +147,6 @@ for i=1:numel(gammas)
     Y_ts = Y(IselTest,:); Y_ts=reshape(Y_ts,numel(Y_ts),1);
     % running
     rtn = code_example(gamma,trainx,Y_tr,testx,Y_ts,task_indexes,task_indexes_test,cv_size,Dini,iterations,method_str, epsilon_init, fname);
-    rtn
     selRes(i)=sum(sum(Y_ts==(rtn>=0.5)));
 end
 gamma=gammas(find(selRes==max(selRes)));
