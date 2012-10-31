@@ -122,7 +122,7 @@ perf=[perf;[acc,vecacc,pre,rec,f1,auc1,auc2]];perf
 if ~or(strcmp(name{1},'fp'),strcmp(name{1},'cancer'))
     K=X'; 
 end
-gammas=[100,10,5,1,0.5,0.1,0.01,0.001];
+gammas=[100,10,5,1,0.5,0.1,0.01];
 iterations=10;
 if strcmp(name{1},'cancer')
     iterations=5
